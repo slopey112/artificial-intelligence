@@ -127,7 +127,7 @@
     (pat (rest pattern)))
     (if (null pat)
       (match-variable var input bindings)
-      (let ((pos (first-match-pos (first pat) input bindings)))
+      (let ((pos (first-match-pos (first pat) input start)))
         (if (null pos)
           fail
           (let ((b2 (pat-match pat
@@ -165,7 +165,6 @@
     (eval (second (first pattern))))
     (pat-match (rest pattern) input bindings)))
 
-
 (defun pat-match-abbrev (symbol expansion)
   "Define symbol as a macro standing for a pat-match pattern."
   (setf (get symbol 'expand-pat-match-abbrev)
@@ -178,3 +177,12 @@
   ((atom pat) pat)
   (t (cons (expand-pat-match-abbrev (first pat))
     (expand-pat-match-abbrev (rest pat))))))
+
+(defun rule-based-translator (input rules &key (matcher #'pat-match)
+  (rule-if #'first) (rule-then #'rest) (action #'sublis))
+  "Finds rule that matches input, and then transforms it."
+  (some #'(lambda (rule)
+    (let ((result (funcall matcher (funcall rule-if rule) input)))
+      (if (not (eq result fail))
+        (funcall action result (funcall rule-then rule)))))
+    rules))
